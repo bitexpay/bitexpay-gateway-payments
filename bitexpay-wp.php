@@ -23,9 +23,7 @@ add_action( 'plugins_loaded', 'bitexpay_gateway_load', 0 );
 
 function bitexpay_gateway_load(){
     
-    if(!class_exists('WC_Payment_Gateway')){
-        return;
-    }
+    if(!class_exists('WC_Payment_Gateway')) return;
 
     /**
      * Add method payment
