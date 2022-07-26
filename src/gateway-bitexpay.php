@@ -10,7 +10,6 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
     private $bitexpayAddresss = "http://localhost:4200/#/auth/login_/";
     private $ipn_url;
 
-
     /**
      * Constructor
      * @description: Init params of plugin bitexpay gateway payment
@@ -26,7 +25,7 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
         
         $this->init_form_fields();
         $this->init_settings();  
-        
+
         $this->title = $this->get_option('title');
         $this->enabled = $this->get_option('enabled');
         $this->description = $this->get_option('description');
@@ -160,8 +159,6 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
             'result' => 'success',
             'redirect' => $this->generate_bitexpay_url( $order )
         );
-
-        // var_dump($order);
     }
 
     public function payment_fields(){
@@ -193,7 +190,6 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
         $signature = hash_hmac('sha512', $query, $this->secret_key);
         $bitexpayUrl = $this->bitexpayAddresss . 'wordpress/filter?' . $query. '&signature=' . $signature;
 
-        var_dump($query);  //die();
         return $bitexpayUrl;
     }
 
@@ -279,22 +275,25 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
 
     public function check_ipn_response(){
         @ob_clean();
-        // http://localhost/epsilon2/?wc-api=WC_Gateway_Bitexpay
-       
-        if(isset($_POST['status']) && $_POST['status'] == 'process payment'){
-            if(! empty($_POST) && $this->check_ipn_and_signature()){
-                parse_str($_POST['params'], $params);
 
-                if(isset($_POST['txid']) && !empty($_POST['txid'])){
-                    $this->request_success_order($params, $_POST['status'], $_POST['status_code'], $_POST['txid']);
+        
+        if(isset($_GET['status']) && ($_GET['status'] == 'process payment' || $_GET['status'] == 'incomplete')){
+            
+            if(! empty($_GET) && $this->check_ipn_and_signature($_GET['signature'])){
+                
+                parse_str($_GET['params'], $params);
+                
+                if(isset($_GET['txid']) && !empty($_GET['txid'])){
+                    $this->request_success_order($params, $_GET['status'], $_GET['status_code'], $_GET['txid']);
                 }else
                 wp_die("Bitexpay Error: not send txid");
             }else{
                 wp_die('Bitexpay Error signature and ipn url', 'Bitexpay Gateway Payment');
             }
-        }else{
+        } else{
             wp_die('Bitexpay Error whit status fail', 'Bitexpay Gateway Payment');
         }
+
     }
 
     /**
@@ -309,7 +308,8 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
        
         $arrayUrl = ["success_url", "cancel_url", "ipn_url", "custom", "email"];
         $arrayParams = explode('&', $params);
-  
+        // var_dump($arrayParams);  
+
         for($i = 0; $i < count($arrayParams); $i++){
             foreach($arrayUrl as $url){
                 if( str_contains ( $arrayParams[$i] , $url )){
@@ -321,7 +321,11 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
         }
 
         $paramsBuilding = implode('&', $arrayParams);
+        // var_dump($paramsBuilding);  
+        
         $hmac = hash_hmac('sha512', $paramsBuilding, $this->secret_key);
+        // var_dump($hmac); 
+        // die();
         return $hmac;
     }
 
@@ -330,16 +334,14 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
      * 
      * @description Validate ipn_url
     */
-    public function check_ipn_and_signature(){
+    public function check_ipn_and_signature($signature){
 
         $error  = "";   $success = false;
-        $headers = getallheaders(); 
-
-        if(isset($headers['signature'])){
-            if(isset($_POST['params'])){
-                $hmac = $this->buildingHmac($_POST['params']);
-
-                if($headers['signature'] === $hmac){
+        if(isset($signature)){
+            if(isset($_GET['params'])){
+                $hmac = $this->buildingHmac($_GET['params']);
+       
+                if($signature === $hmac){
                     $success = true;
                 }else{
                     $error = "HMAC signature does not match";
@@ -353,7 +355,7 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
 
         if($success){
             $params = [];
-            parse_str($_POST['params'], $params);
+            parse_str($_GET['params'], $params);
 
             if(isset($params['invoice']) && isset($params['custom'])){
                 $order = $this->get_order_bitexpay($params);
@@ -446,11 +448,17 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
                 if($statusBitexpay == 'process payment' && $statusCode == '1'){
                     print("Orde complete\n");
                     update_post_meta( $order->get_id(), '_bitexpay_payments_complete', 'Yes');
+                    $order->add_order_note('Bitexpay Payment done ' );
                     $order->payment_complete();
+
+                    return json_encode(['success' => 'ok' ]);
                 }else 
                 if($statusCode == '2'){
                     print "Marking pending\n";
+                    $order->add_order_note('Bitexpay Payment incomplete ' );
                     $order->update_status('pending', 'Bitexpay Payment pending: ' . $statusBitexpay);
+
+                    return json_encode(['success' => 'ok' ]);
                 }else
                 if($statusCode == '3'){
                     print "Marking cancelled\n";
