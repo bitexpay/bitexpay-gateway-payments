@@ -7,7 +7,7 @@
 final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
 
     // private $bitexpayAddresss = "http://pay.bitexblock.com/#/auth/login_/";
-    private $bitexpayAddresss = "http://localhost:4200/#/auth/login_/";
+    private $bitexpayAddresss = "http://pay.bitexblock.com/#/auth/login_/";
     private $ipn_url;
 
     /**
@@ -308,7 +308,6 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
        
         $arrayUrl = ["success_url", "cancel_url", "ipn_url", "custom", "email"];
         $arrayParams = explode('&', $params);
-        // var_dump($arrayParams);  
 
         for($i = 0; $i < count($arrayParams); $i++){
             foreach($arrayUrl as $url){
@@ -321,11 +320,7 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
         }
 
         $paramsBuilding = implode('&', $arrayParams);
-        // var_dump($paramsBuilding);  
-        
         $hmac = hash_hmac('sha512', $paramsBuilding, $this->secret_key);
-        // var_dump($hmac); 
-        // die();
         return $hmac;
     }
 
