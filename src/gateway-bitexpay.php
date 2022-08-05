@@ -17,7 +17,7 @@ final class WC_Gateway_Bitexpay extends WC_Payment_Gateway {
     public function __construct(){
         
         $this->id = 'bitexpay';
-        $this->icon = plugins_url().'/bitexpay-wp/src/assets/logo.jpg';
+        $this->icon = plugins_url().'/bitexpay-gateway-payments/src/assets/logo.jpg';
         $this->has_fields = true;
         $this->method_title = __( 'Bitexpay', 'woocommerce' );
         $this->method_description = __('Bitexpay Payment Gateway for WooCommerce whit crytocurrency', 'woocommerce' );
